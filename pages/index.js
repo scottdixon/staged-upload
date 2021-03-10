@@ -10,6 +10,10 @@ const GENERATE_URL = gql`
       stagedTargets {
         resourceUrl
         url
+        parameters {
+          name
+          value
+        }
       }
       userErrors {
         field
@@ -37,7 +41,8 @@ function Index() {
         {
           "resource": "COLLECTION_IMAGE",
           "filename": files[0].name,
-          "mimeType": files[0].type
+          "mimeType": files[0].type,
+          "fileSize": files[0].size.toString()
         }
       ]
     }})
