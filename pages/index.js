@@ -26,11 +26,27 @@ const GENERATE_URL = gql`
 function Index() {
   const [file, setFile] = useState();
 
-  const uploadFile = (staged) => {
+  const uploadFile = async (staged) => {
     console.log(staged)
     console.log('UPLOAD', file)
+
+    // Prepare form
     const formData = new FormData()
-    // Do the actual upload
+
+    const { url, parameters } = staged.stagedUploadsCreate.stagedTargets[0]
+
+    for (const param of parameters) {
+      formData.append(param.name, param.value);
+    }
+
+    formData.append('file', file);
+
+    // Upload
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData,
+      mode: 'no-cors'
+    });
   }
   const [generateUrl, { data }] = useMutation(GENERATE_URL, { onCompleted: uploadFile });
 
