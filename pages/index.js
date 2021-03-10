@@ -42,7 +42,8 @@ function Index() {
           "resource": "COLLECTION_IMAGE",
           "filename": files[0].name,
           "mimeType": files[0].type,
-          "fileSize": files[0].size.toString()
+          "fileSize": files[0].size.toString(),
+          "httpMethod": "POST"
         }
       ]
     }})
