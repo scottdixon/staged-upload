@@ -1,9 +1,8 @@
-import React, {useState, useCallback} from "react";
-import { DropZone } from "@shopify/polaris";
-import { withApollo } from '@apollo/react-hoc';
+import React, { useState } from "react";
+import { DropZone, Thumbnail, Spinner } from "@shopify/polaris";
 import { gql } from 'apollo-boost';
 import { useMutation } from "react-apollo";
-import ResourceListWithCollections from "../components/Collections"
+
 const GENERATE_URL = gql`
   mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
     stagedUploadsCreate(input: $input) {
@@ -23,19 +22,38 @@ const GENERATE_URL = gql`
   }
 `;
 
-function Index() {
+const COLLECTION_UPDATE = gql`
+  mutation collectionUpdate($input: CollectionInput!) {
+    collectionUpdate(input: $input) {
+      collection {
+        id
+        image {
+          originalSrc
+        }
+      }
+      job {
+        id
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`  
+
+function ImageDrop(props) {
   const [file, setFile] = useState();
+  const [loading, setLoading] = useState(false);
+  const [collectionUpdate] = useMutation(COLLECTION_UPDATE, { onCompleted: () => setLoading(false) });
 
   const uploadFile = async (staged) => {
     // Prepare form
     const formData = new FormData()
-
     const { url, parameters } = staged.stagedUploadsCreate.stagedTargets[0]
-
     for (const param of parameters) {
       formData.append(param.name, param.value);
     }
-
     formData.append('file', file);
 
     // Upload
@@ -44,10 +62,24 @@ function Index() {
       body: formData,
       mode: 'no-cors'
     });
+
+    // Update collection
+    const key = parameters.find(p => p.name === 'key')
+    collectionUpdate({ variables: {
+        "input": {
+          "id": props.collectionId,
+          "image": {
+            "src": `${url}/${key.value}`
+          }
+        }
+      }
+    })
   }
+
   const [generateUrl, { data }] = useMutation(GENERATE_URL, { onCompleted: uploadFile });
 
   const handleDropZoneDrop = (files) => {
+    setLoading(true)
     setFile(files[0])
     generateUrl({ variables: {
       "input": [
@@ -61,8 +93,11 @@ function Index() {
       ]
     }})
   }
-
-  return <ResourceListWithCollections />
+  return (
+    <DropZone onDrop={handleDropZoneDrop} allowMultiple={false}>
+      { loading ? <Spinner size="large" /> : <Thumbnail source={props.collectionImage} /> }
+    </DropZone>
+  );
 }
 
-export default Index;
+export default ImageDrop;
