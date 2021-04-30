@@ -40,17 +40,30 @@ const COLLECTION_UPDATE = gql`
       }
     }
   }
-`  
+`
 
 function ImageDrop(props) {
-  const [file, setFile] = useState();
   const [loading, setLoading] = useState(false);
   const [collectionUpdate] = useMutation(COLLECTION_UPDATE, { onCompleted: () => setLoading(false) });
+  const [generateUrl] = useMutation(GENERATE_URL);
 
-  const uploadFile = async (staged) => {
-    // Prepare form
+  const handleDropZoneDrop = async ([file]) => {
+    setLoading(true)
+
+    const { data } = await generateUrl({ variables: {
+      "input": [
+        {
+          "resource": "COLLECTION_IMAGE",
+          "filename": file.name,
+          "mimeType": file.type,
+          "fileSize": file.size.toString(),
+          "httpMethod": "POST"
+        }
+      ]
+    }})
+
     const formData = new FormData()
-    const { url, parameters } = staged.stagedUploadsCreate.stagedTargets[0]
+    const { url, parameters } = data.stagedUploadsCreate.stagedTargets[0]
 
     parameters.forEach(({name, value}) => {
       formData.append(name, value)
@@ -58,7 +71,6 @@ function ImageDrop(props) {
 
     formData.append('file', file)
 
-    // Upload
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
@@ -66,7 +78,7 @@ function ImageDrop(props) {
 
     if (response.ok) {
       const key = parameters.find(p => p.name === 'key')
-      collectionUpdate({ variables: {
+      await collectionUpdate({ variables: {
           "input": {
             "id": props.collectionId,
             "image": {
@@ -80,25 +92,6 @@ function ImageDrop(props) {
       console.error('Unable to upload to S3 bucket')
       setLoading(false)
     }
-
-  }
-
-  const [generateUrl, { data }] = useMutation(GENERATE_URL, { onCompleted: uploadFile });
-
-  const handleDropZoneDrop = (files) => {
-    setLoading(true)
-    setFile(files[0])
-    generateUrl({ variables: {
-      "input": [
-        {
-          "resource": "COLLECTION_IMAGE",
-          "filename": files[0].name,
-          "mimeType": files[0].type,
-          "fileSize": files[0].size.toString(),
-          "httpMethod": "POST"
-        }
-      ]
-    }})
   }
   return (
     <DropZone onDrop={handleDropZoneDrop} allowMultiple={false}>
